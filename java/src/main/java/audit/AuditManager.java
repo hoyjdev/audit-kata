@@ -11,6 +11,7 @@ public class AuditManager {
     private final int maxEntriesPerFile;
     private final String directoryName;
     private final IFileSystem fileSystem;
+    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public AuditManager(int maxEntriesPerFile, String directoryName, IFileSystem fileSystem) {
         this.maxEntriesPerFile = maxEntriesPerFile;
@@ -18,20 +19,18 @@ public class AuditManager {
         this.fileSystem = fileSystem;
     }
 
+    // nu 2 responsibilities: I/O en audits verwerken
     public void addRecord(String visitorName, LocalDateTime timeOfVisit) {
-        String[] filePaths = fileSystem.getFiles(directoryName);
-        String[] sorted = sortByIndex(filePaths);
-        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        String newRecord = visitorName + ";" + timeOfVisit.format(dateTimeFormatter);
+        String newRecord = createRecordFrom(visitorName, timeOfVisit);
 
-        if (sorted.length == 0) {
-            String newFile = Paths.get(directoryName, "audit_1.txt").toString();
-            fileSystem.writeAllText(newFile, newRecord);
+        String[] currentFiles = getCurrentFilesSortedByName();
+        if (currentFiles.length == 0) {
+            writeNewRecordToNewFile(newRecord);
             return;
         }
 
-        int currentFileIndex = sorted.length - 1;
-        String currentFilePath = sorted[currentFileIndex];
+        int currentFileIndex = currentFiles.length - 1;
+        String currentFilePath = currentFiles[currentFileIndex];
         List<String> lines = fileSystem.readAllLines(currentFilePath);
 
         if (lines.size() < maxEntriesPerFile) {
@@ -39,10 +38,29 @@ public class AuditManager {
             String newContent = String.join(System.lineSeparator(), lines);
             fileSystem.writeAllText(currentFilePath, newContent);
         } else {
-            String newName = "audit_" + (currentFileIndex + 2) + ".txt";
-            String newFile = Paths.get(directoryName, newName).toString();
+            String newFile = createNewAuditFile(currentFileIndex);
             fileSystem.writeAllText(newFile, newRecord);
         }
+    }
+
+    private void writeNewRecordToNewFile(String newRecord) {
+        String newFile = Paths.get(directoryName, "audit_1.txt").toString();
+        fileSystem.writeAllText(newFile, newRecord);
+    }
+
+    private String[] getCurrentFilesSortedByName() {
+        String[] filePaths = fileSystem.getFiles(directoryName);
+        String[] sorted = sortByIndex(filePaths);
+        return sorted;
+    }
+
+    private String createRecordFrom(String visitorName, LocalDateTime timeOfVisit) {
+        return visitorName + ";" + timeOfVisit.format(dateTimeFormatter);
+    }
+
+    private String createNewAuditFile(int currentFileIndex) {
+        String newName = "audit_" + (currentFileIndex + 2) + ".txt";
+        return Paths.get(directoryName, newName).toString();
     }
 
     private String[] sortByIndex(String[] filePaths) {
