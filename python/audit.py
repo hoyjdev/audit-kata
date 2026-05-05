@@ -19,31 +19,40 @@ class FileSystem(abc.ABC):
 
 
 class AuditManager:
-    def __init__(self, max_entries_per_file: int, directory_name: str, file_system: FileSystem):
+    def __init__(
+        self, max_entries_per_file: int, directory_name: str, file_system: FileSystem
+    ):
         self._max_entries_per_file = max_entries_per_file
         self._directory_name = directory_name
         self._file_system = file_system
 
     def add_record(self, visitor_name: str, time_of_visit: datetime):
+        # Fetch file paths
         file_paths = self._file_system.get_files(self._directory_name)
+        # Sorted paths by index, lowest to highest. [(1, 'audits/audit_1.txt'), (2, 'audits/audit_2.txt')]
         sorted_paths = self._sort_by_index(file_paths)
-        new_record = visitor_name + ';' + time_of_visit.strftime("%Y-%m-%d %H:%M:%S")
+        # Create record string
+        new_record = visitor_name + ";" + time_of_visit.strftime("%Y-%m-%d %H:%M:%S")
 
         if len(sorted_paths) == 0:
-            new_file = os.path.join(self._directory_name, 'audit_1.txt')
+            # Edge case: no paths, then create one file and write
+            new_file = os.path.join(self._directory_name, "audit_1.txt")
             self._file_system.write_all_text(new_file, new_record)
             return
 
+        # Otherwise: Read all lines from last file
         current_file_index, curr_file_path = sorted_paths[-1]
         lines = self._file_system.read_all_lines(curr_file_path)
 
         if len(lines) < self._max_entries_per_file:
+            # If there are fewer lines than max, write to last file
             lines.append(new_record)
-            new_content = '\n'.join(lines)
+            new_content = "\n".join(lines)
             self._file_system.write_all_text(curr_file_path, new_content)
         else:
+            # If there are more lines than max, write to new file
             new_index = current_file_index + 1
-            new_name = f'audit_{new_index}.txt'
+            new_name = f"audit_{new_index}.txt"
             new_file = os.path.join(self._directory_name, new_name)
             self._file_system.write_all_text(new_file, new_record)
 
