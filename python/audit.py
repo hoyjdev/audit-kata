@@ -45,17 +45,16 @@ class AuditManager:
         current_file_index, curr_file_path = sorted_paths[-1]
         lines = self._file_system.read_all_lines(curr_file_path)
 
+        record = Record(current_file_index, lines)
+        record = push_or_create_new(record, entry, self._max_entries_per_file)
+
         if len(lines) < self._max_entries_per_file:
             # If there are fewer lines than max, write to last file
-            lines.append(entry)
-            new_content = "\n".join(lines)
-            self._file_system.write_all_text(curr_file_path, new_content)
+            self._file_system.write_all_text(curr_file_path, str(record))
         else:
             # If there are more lines than max, write to new file
-            new_index = current_file_index + 1
-            new_name = f"audit_{new_index}.txt"
-            new_file = os.path.join(self._directory_name, new_name)
-            self._file_system.write_all_text(new_file, entry)
+            new_file = os.path.join(self._directory_name, f"audit_{record.index}.txt")
+            self._file_system.write_all_text(new_file, str(record))
 
     @staticmethod
     def _sort_by_index(file_paths) -> list[tuple[Any, Any]]:
@@ -66,6 +65,9 @@ class AuditManager:
 class Record:
     index: int
     entries: list[str]
+
+    def __str__(self) -> str:
+        return "\n".join(self.entries)
 
 
 def push_or_create_new(record: Record, item: str, max_size: int) -> Record:

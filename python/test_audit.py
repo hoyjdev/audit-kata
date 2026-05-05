@@ -49,6 +49,11 @@ class TestRecord:
         assert record.index == 1
         assert record.entries == ["Alice;2019-04-06 18:00:00"]
 
+    def test_stringifies_entries(self):
+        record = Record(1, ["Alice;2019-04-06 18:00:00", "Bob;2019-04-06 18:15:00"])
+
+        assert str(record) == "Alice;2019-04-06 18:00:00\nBob;2019-04-06 18:15:00"
+
 
 class TestPushOrCreateNew:
     def test_adds_entry_to_existing_record(self):
