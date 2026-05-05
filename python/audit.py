@@ -1,5 +1,6 @@
 import abc
 import os.path
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -31,13 +32,13 @@ class AuditManager:
         file_paths = self._file_system.get_files(self._directory_name)
         # Sorted paths by index, lowest to highest. [(1, 'audits/audit_1.txt'), (2, 'audits/audit_2.txt')]
         sorted_paths = self._sort_by_index(file_paths)
-        # Create record string
-        new_record = visitor_name + ";" + time_of_visit.strftime("%Y-%m-%d %H:%M:%S")
+        # Create entry
+        entry = visitor_name + ";" + time_of_visit.strftime("%Y-%m-%d %H:%M:%S")
 
         if len(sorted_paths) == 0:
             # Edge case: no paths, then create one file and write
             new_file = os.path.join(self._directory_name, "audit_1.txt")
-            self._file_system.write_all_text(new_file, new_record)
+            self._file_system.write_all_text(new_file, entry)
             return
 
         # Otherwise: Read all lines from last file
@@ -46,7 +47,7 @@ class AuditManager:
 
         if len(lines) < self._max_entries_per_file:
             # If there are fewer lines than max, write to last file
-            lines.append(new_record)
+            lines.append(entry)
             new_content = "\n".join(lines)
             self._file_system.write_all_text(curr_file_path, new_content)
         else:
@@ -54,8 +55,20 @@ class AuditManager:
             new_index = current_file_index + 1
             new_name = f"audit_{new_index}.txt"
             new_file = os.path.join(self._directory_name, new_name)
-            self._file_system.write_all_text(new_file, new_record)
+            self._file_system.write_all_text(new_file, entry)
 
     @staticmethod
     def _sort_by_index(file_paths) -> list[tuple[Any, Any]]:
         return list(enumerate(sorted(file_paths), start=1))
+
+
+@dataclass
+class Record:
+    index: int
+    entries: list[str]
+
+
+def push_or_create_new(record: Record, item: str, max_size: int) -> Record:
+    if len(record.entries) == max_size:
+        return Record(record.index + 1, [item])
+    return Record(record.index, record.entries + [item])
