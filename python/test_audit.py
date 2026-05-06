@@ -43,20 +43,16 @@ def test__audit__create_file__when_current_file_overflows(monkeypatch):
 class TestAuditor:
     def test_finds_latest_record(self):
         files = ["audits/audit_1.txt", "audits/audit_3.txt", "audits/audit_2.txt"]
-        result = Auditor.find_latest_record_path_and_index(files)
-        assert result == (3, "audits/audit_3.txt")
+        assert Auditor.latest_path_and_index(files) == (3, "audits/audit_3.txt")
 
     def test_returns_default_given_no_records(self):
         files = []
-        result = Auditor.find_latest_record_path_and_index(files)
-        assert result == (0, "")
+        assert Auditor.latest_path_and_index(files) == (0, "")
 
     def test_adds_entry_to_record(self):
         old = Record(1, ["Jane;2019-04-05 18:00:00"])
 
-        actual = Auditor.add_entry(old, "Alice;2019-04-06 18:00:00", 3)
-
-        assert actual == Record(
+        assert Auditor.add_entry(old, "Alice;2019-04-06 18:00:00", 3) == Record(
             1, ["Jane;2019-04-05 18:00:00", "Alice;2019-04-06 18:00:00"]
         )
 
@@ -64,6 +60,12 @@ class TestAuditor:
         old = Record(1, ["a", "b", "c"])
 
         assert Auditor.add_entry(old, "d", 3) == Record(2, ["d"])
+
+    def test_creates_entry(self):
+        assert (
+            Auditor.create_entry("Alice", datetime.fromisoformat("2019-04-06 18:00:00"))
+            == "Alice;2019-04-06 18:00:00"
+        )
 
 
 # Shell: Filesystem

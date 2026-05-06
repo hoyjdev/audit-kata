@@ -29,13 +29,16 @@ class AuditPipeline:
     def run(self, visitor_name: str, time_of_visit: datetime):
         # Find latest record path and index
         file_paths = self._file_system.get_files(self._directory_name)
-        most_recent_record_path = Auditor.find_latest_record_path_and_index(file_paths)
+        most_recent_record_path = Auditor.latest_path_and_index(file_paths)
 
         entries = self._file_system.read_all_lines(most_recent_record_path[1])
 
-        new_entry = create_entry(visitor_name, time_of_visit)
-        record = Record(most_recent_record_path[0], entries)
-        record = Auditor.add_entry(record, new_entry, self._max_entries_per_file)
+        new_entry = Auditor.create_entry(visitor_name, time_of_visit)
+        record = Auditor.add_entry(
+            Record(most_recent_record_path[0], entries),
+            new_entry,
+            self._max_entries_per_file,
+        )
 
         new_file = os.path.join(self._directory_name, f"audit_{record.index}.txt")
         self._file_system.write_all_text(new_file, str(record))
@@ -43,7 +46,7 @@ class AuditPipeline:
 
 class Auditor:
     @staticmethod
-    def find_latest_record_path_and_index(file_paths: list[str]) -> tuple[int, str]:
+    def latest_path_and_index(file_paths: list[str]) -> tuple[int, str]:
         if records := list(enumerate(sorted(file_paths), start=1)):
             return records[-1]
         else:
@@ -55,6 +58,10 @@ class Auditor:
             return Record(record.index + 1, [entry])
         return Record(record.index, record.entries + [entry])
 
+    @staticmethod
+    def create_entry(visitor_name: str, time_of_visit: datetime) -> str:
+        return visitor_name + ";" + time_of_visit.strftime("%Y-%m-%d %H:%M:%S")
+
 
 @dataclass
 class Record:
@@ -63,7 +70,3 @@ class Record:
 
     def __str__(self) -> str:
         return "\n".join(self.entries)
-
-
-def create_entry(visitor_name: str, time_of_visit: datetime) -> str:
-    return visitor_name + ";" + time_of_visit.strftime("%Y-%m-%d %H:%M:%S")
