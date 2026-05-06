@@ -25,7 +25,7 @@ def test__audit__create_file__when_current_file_overflows(monkeypatch):
     )
 
     # Act
-    AuditManager(3, "audits", file_system_mock).run(
+    AuditManager(3, "audits", file_system_mock).audit(
         "Alice", datetime.fromisoformat("2019-04-06T18:00:00")
     )
 
@@ -83,7 +83,16 @@ class TestRecord:
         record = Record(1, ["Alice;2019-04-06 18:00:00"])
 
         assert record.index == 1
+
+    def test_has_entries(self):
+        record = Record(1, ["Alice;2019-04-06 18:00:00"])
+
         assert record.entries == ["Alice;2019-04-06 18:00:00"]
+
+    def test_has_filename(self):
+        record = Record(1, ["Alice;2019-04-06 18:00:00"])
+
+        assert record.filename == "audit_1.txt"
 
     def test_stringifies_entries(self):
         record = Record(1, ["Alice;2019-04-06 18:00:00", "Bob;2019-04-06 18:15:00"])

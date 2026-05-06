@@ -26,7 +26,7 @@ class AuditManager:
         self._directory_name = directory_name
         self._file_system = file_system
 
-    def run(self, visitor_name: str, time_of_visit: datetime) -> None:
+    def audit(self, visitor_name: str, time_of_visit: datetime) -> None:
         file_paths = self._file_system.get_files(self._directory_name)
         (recent_idx, recent_path) = Files.latest_path_and_index(file_paths)
         entries = self._file_system.read_all_lines(recent_path)
@@ -37,7 +37,7 @@ class AuditManager:
             self._max_entries_per_file,
         )
 
-        new_file = os.path.join(self._directory_name, f"audit_{record.index}.txt")
+        new_file = os.path.join(self._directory_name, record.filename)
         self._file_system.write_all_text(new_file, str(record))
 
 
@@ -66,6 +66,10 @@ class Auditor:
 class Record:
     index: int
     entries: list[str]
+
+    @property
+    def filename(self) -> str:
+        return f"audit_{self.index}.txt"
 
     def __str__(self) -> str:
         return "\n".join(self.entries)
