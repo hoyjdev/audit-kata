@@ -28,7 +28,7 @@ class AuditManager:
 
     def run(self, visitor_name: str, time_of_visit: datetime) -> None:
         file_paths = self._file_system.get_files(self._directory_name)
-        (recent_idx, recent_path) = Auditor.latest_path_and_index(file_paths)
+        (recent_idx, recent_path) = Files.latest_path_and_index(file_paths)
         entries = self._file_system.read_all_lines(recent_path)
 
         record = Auditor.add_entry(
@@ -41,7 +41,7 @@ class AuditManager:
         self._file_system.write_all_text(new_file, str(record))
 
 
-class Auditor:
+class Files:
     @staticmethod
     def latest_path_and_index(file_paths: list[str]) -> tuple[int, str]:
         if records := list(enumerate(sorted(file_paths), start=1)):
@@ -49,6 +49,8 @@ class Auditor:
         else:
             return (0, "")
 
+
+class Auditor:
     @staticmethod
     def add_entry(record: Record, entry: str, max_size: int) -> Record:
         if len(record.entries) == max_size:

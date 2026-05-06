@@ -1,7 +1,7 @@
 from datetime import datetime
 from unittest.mock import Mock
 
-from audit import AuditManager, Auditor, FileSystem, Record
+from audit import AuditManager, Auditor, Files, FileSystem, Record
 
 
 def test__audit__create_file__when_current_file_overflows(monkeypatch):
@@ -40,15 +40,17 @@ def test__audit__create_file__when_current_file_overflows(monkeypatch):
 # (Exercise assumes records track recency with index in name)
 
 
-class TestAuditor:
+class TestFiles:
     def test_finds_latest_record(self):
         files = ["audits/audit_1.txt", "audits/audit_3.txt", "audits/audit_2.txt"]
-        assert Auditor.latest_path_and_index(files) == (3, "audits/audit_3.txt")
+        assert Files.latest_path_and_index(files) == (3, "audits/audit_3.txt")
 
     def test_returns_default_given_no_records(self):
         files = []
-        assert Auditor.latest_path_and_index(files) == (0, "")
+        assert Files.latest_path_and_index(files) == (0, "")
 
+
+class TestAuditor:
     def test_adds_entry_to_record(self):
         old = Record(1, ["Jane;2019-04-05 18:00:00"])
 
