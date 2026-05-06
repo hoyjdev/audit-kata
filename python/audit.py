@@ -1,5 +1,5 @@
 import abc
-import os.path
+import os
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -18,7 +18,7 @@ class FileSystem(abc.ABC):
         raise NotImplementedError
 
 
-class AuditPipeline:
+class AuditManager:
     def __init__(
         self, max_entries_per_file: int, directory_name: str, file_system: FileSystem
     ):
@@ -26,7 +26,7 @@ class AuditPipeline:
         self._directory_name = directory_name
         self._file_system = file_system
 
-    def run(self, visitor_name: str, time_of_visit: datetime):
+    def run(self, visitor_name: str, time_of_visit: datetime) -> None:
         # Find latest record path and index
         file_paths = self._file_system.get_files(self._directory_name)
         most_recent_record_path = Auditor.latest_path_and_index(file_paths)

@@ -1,7 +1,7 @@
 from datetime import datetime
 from unittest.mock import Mock
 
-from audit import Auditor, AuditPipeline, FileSystem, Record
+from audit import AuditManager, Auditor, FileSystem, Record
 
 
 def test__audit__create_file__when_current_file_overflows(monkeypatch):
@@ -25,7 +25,7 @@ def test__audit__create_file__when_current_file_overflows(monkeypatch):
     )
 
     # Act
-    AuditPipeline(3, "audits", file_system_mock).run(
+    AuditManager(3, "audits", file_system_mock).run(
         "Alice", datetime.fromisoformat("2019-04-06T18:00:00")
     )
 
