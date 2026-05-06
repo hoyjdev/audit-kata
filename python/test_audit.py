@@ -1,7 +1,7 @@
 from datetime import datetime
 from unittest.mock import Mock
 
-from audit import AuditManager, FileSystem, Record, push_or_create_new
+from audit import Auditor, AuditPipeline, FileSystem, Record
 
 
 def test__audit__create_file__when_current_file_overflows(monkeypatch):
@@ -23,15 +23,47 @@ def test__audit__create_file__when_current_file_overflows(monkeypatch):
             "Jack;2019-04-06 17:00:00",
         ],
     )
-    sut = AuditManager(3, "audits", file_system_mock)
 
     # Act
-    sut.add_record("Alice", datetime.fromisoformat("2019-04-06T18:00:00"))
+    AuditPipeline(3, "audits", file_system_mock).run(
+        "Alice", datetime.fromisoformat("2019-04-06T18:00:00")
+    )
 
     # Assert
     file_system_mock.write_all_text.assert_called_with(
         "audits/audit_3.txt", "Alice;2019-04-06 18:00:00"
     )
+
+
+# User goal: Append the visitor’s name and the time of their visit to the end of the
+# most recent file. If maximum entries is in file, start a new one.
+# (Exercise assumes records track recency with index in name)
+
+
+class TestAuditor:
+    def test_finds_latest_record(self):
+        files = ["audits/audit_1.txt", "audits/audit_3.txt", "audits/audit_2.txt"]
+        result = Auditor.find_latest_record_path_and_index(files)
+        assert result == (3, "audits/audit_3.txt")
+
+    def test_returns_default_given_no_records(self):
+        files = []
+        result = Auditor.find_latest_record_path_and_index(files)
+        assert result == (0, "")
+
+    def test_adds_entry_to_record(self):
+        old = Record(1, ["Jane;2019-04-05 18:00:00"])
+
+        actual = Auditor.add_entry(old, "Alice;2019-04-06 18:00:00", 3)
+
+        assert actual == Record(
+            1, ["Jane;2019-04-05 18:00:00", "Alice;2019-04-06 18:00:00"]
+        )
+
+    def test_starts_new_record_when_max_entries_reached(self):
+        old = Record(1, ["a", "b", "c"])
+
+        assert Auditor.add_entry(old, "d", 3) == Record(2, ["d"])
 
 
 # Shell: Filesystem
@@ -53,15 +85,3 @@ class TestRecord:
         record = Record(1, ["Alice;2019-04-06 18:00:00", "Bob;2019-04-06 18:15:00"])
 
         assert str(record) == "Alice;2019-04-06 18:00:00\nBob;2019-04-06 18:15:00"
-
-
-class TestPushOrCreateNew:
-    def test_adds_entry_to_existing_record(self):
-        old = Record(1, ["a", "b"])
-
-        assert push_or_create_new(old, "c", 3) == Record(1, ["a", "b", "c"])
-
-    def test_returns_new_record_given_max_size_will_be_exceeded(self):
-        old = Record(1, ["a", "b", "c"])
-
-        assert push_or_create_new(old, "d", 3) == Record(2, ["d"])

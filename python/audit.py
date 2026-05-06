@@ -18,7 +18,7 @@ class FileSystem(abc.ABC):
         raise NotImplementedError
 
 
-class AuditManager:
+class AuditPipeline:
     def __init__(
         self, max_entries_per_file: int, directory_name: str, file_system: FileSystem
     ):
@@ -26,22 +26,34 @@ class AuditManager:
         self._directory_name = directory_name
         self._file_system = file_system
 
-    def add_record(self, visitor_name: str, time_of_visit: datetime):
-        # Fetch file paths
+    def run(self, visitor_name: str, time_of_visit: datetime):
+        # Find latest record path and index
         file_paths = self._file_system.get_files(self._directory_name)
+        most_recent_record_path = Auditor.find_latest_record_path_and_index(file_paths)
 
-        sorted_paths = sort_by_index(file_paths)
-        last_path = find_last_path(sorted_paths)
+        entries = self._file_system.read_all_lines(most_recent_record_path[1])
 
-        # Read entries from last file (in reality, this would default to empty list)
-        lines = self._file_system.read_all_lines(last_path[1])
-
-        entry = create_entry(visitor_name, time_of_visit)
-        record = Record(last_path[0], lines)
-        record = push_or_create_new(record, entry, self._max_entries_per_file)
+        new_entry = create_entry(visitor_name, time_of_visit)
+        record = Record(most_recent_record_path[0], entries)
+        record = Auditor.add_entry(record, new_entry, self._max_entries_per_file)
 
         new_file = os.path.join(self._directory_name, f"audit_{record.index}.txt")
         self._file_system.write_all_text(new_file, str(record))
+
+
+class Auditor:
+    @staticmethod
+    def find_latest_record_path_and_index(file_paths: list[str]) -> tuple[int, str]:
+        if records := list(enumerate(sorted(file_paths), start=1)):
+            return records[-1]
+        else:
+            return (0, "")
+
+    @staticmethod
+    def add_entry(record: Record, entry: str, max_size: int) -> Record:
+        if len(record.entries) == max_size:
+            return Record(record.index + 1, [entry])
+        return Record(record.index, record.entries + [entry])
 
 
 @dataclass
@@ -51,22 +63,6 @@ class Record:
 
     def __str__(self) -> str:
         return "\n".join(self.entries)
-
-
-def push_or_create_new(record: Record, item: str, max_size: int) -> Record:
-    if len(record.entries) == max_size:
-        return Record(record.index + 1, [item])
-    return Record(record.index, record.entries + [item])
-
-
-def sort_by_index(file_paths) -> list[tuple[int, str]]:
-    # Sort paths by index, lowest to highest. [(1, 'audits/audit_1.txt'), (2, 'audits/audit_2.txt')]
-    return list(enumerate(sorted(file_paths), start=1))
-
-
-def find_last_path(paths: list[tuple[int, str]]) -> tuple[int, str]:
-    # Return last index and path in a list, or a default
-    return next(iter(reversed(paths)), (1, ""))
 
 
 def create_entry(visitor_name: str, time_of_visit: datetime) -> str:
