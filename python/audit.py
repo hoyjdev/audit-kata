@@ -27,16 +27,13 @@ class AuditManager:
         self._file_system = file_system
 
     def run(self, visitor_name: str, time_of_visit: datetime) -> None:
-        # Find latest record path and index
         file_paths = self._file_system.get_files(self._directory_name)
-        most_recent_record_path = Auditor.latest_path_and_index(file_paths)
+        (recent_idx, recent_path) = Auditor.latest_path_and_index(file_paths)
+        entries = self._file_system.read_all_lines(recent_path)
 
-        entries = self._file_system.read_all_lines(most_recent_record_path[1])
-
-        new_entry = Auditor.create_entry(visitor_name, time_of_visit)
         record = Auditor.add_entry(
-            Record(most_recent_record_path[0], entries),
-            new_entry,
+            Record(recent_idx, entries),
+            Auditor.create_entry(visitor_name, time_of_visit),
             self._max_entries_per_file,
         )
 
